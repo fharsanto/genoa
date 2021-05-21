@@ -1,0 +1,23 @@
+{
+    "name": "feridev/genoa",
+    "description": "Generate controller & model from Open API",
+    "type": "library",
+    "authors": [
+        {
+            "name": "Feri Putro",
+            "email": "feri.putro@spesolution.com"
+        }
+    ],
+    "require": {
+        "illuminate/console": "^8.40",
+        "illuminate/filesystem": "^8.40",
+        "illuminate/support": "^8.40",
+        "symfony/var-dumper": "^5.2",
+        "cebe/php-openapi": "^1.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "Genoa\\": "src/"
+        }
+    }
+}
