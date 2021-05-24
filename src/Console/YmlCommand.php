@@ -3,7 +3,6 @@
 namespace Genoa\Console;
 
 use cebe\openapi\Reader;
-use cebe\openapi\spec\MediaType;
 use cebe\openapi\spec\OpenApi;
 use cebe\openapi\spec\Reference;
 use cebe\openapi\spec\RequestBody;
@@ -65,10 +64,18 @@ class YmlCommand extends Command
 
         try {
             $this->initializeOpenApi($path);
-            $this->generateUrls();
+            $ops = $this->getOperations();
+            if (!empty($ops)) {
+                $this->generateRoutes($ops);
+            }
         } catch (\Throwable $th) {
             $this->error($th->getMessage());
         }
+    }
+
+    protected function generateRoutes(array $operations)
+    {
+        // code...
     }
 
     /**
@@ -121,7 +128,7 @@ class YmlCommand extends Command
      *
      * @return array
      */
-    protected function generateUrls()
+    protected function getOperations()
     {
         $oa = $this->getOpenApi();
         if (empty($oa->paths)) {
@@ -181,26 +188,30 @@ class YmlCommand extends Command
                 $a = (isset($listMethod[$method])
                         ? $listMethod[$method] : 'http-'.$method);
                 $req = null;
+                $actionName = !empty($action) ? $action : $a;
                 if (in_array($a, ['store', 'update', 'destroy'])
                     && null !== $operation->requestBody) {
-                    $req = $this->generateRequestBody($operation->requestBody);
+                    $req = $this->getRequestBody($operation->requestBody, $controller, $actionName);
                 }
                 $c = [
                     'path' => $path,
                     'controller' => $controller.'Controller',
-                    'action' => !empty($action) ? $action : $a,
+                    'description' => !empty($operation->description) ? $operation->description : $operation->summary,
+                    'operationId' => $operation->operationId,
+                    'action' => $actionName,
                     'method' => strtoupper($method),
                     'actionParam' => $actionParams,
-                    'query' => $this->generateQuery($operation->parameters),
+                    'query' => $this->getQuery($operation->parameters),
                     'request' => $req,
                 ];
                 $components[] = $c;
             }
         }
-        // var_dump($components);
+
+        return $components;
     }
 
-    protected function generateRequestBody(RequestBody $requestBody)
+    protected function getRequestBody(RequestBody $requestBody, string $controller, string $actionName)
     {
         if (null === $requestBody) {
             return;
@@ -211,77 +222,40 @@ class YmlCommand extends Command
         }
 
         foreach ($requestBody->content as $ct => $content) {
-            // var_dump($content);
-
-            // exit;
-            list($modelClass) = $this->getModelClass($content);
-            // var_dump($content->schema->type, $content->schema->description);
-            if (null !== $modelClass) {
-                return $modelClass;
+            $schema = $content->schema;
+            if ($content->schema instanceof Reference) {
+                $schema = $content->resolve();
             }
-        }
-    }
 
-    protected function getModelClass(MediaType $content)
-    {
-        // @var $referencedSchema Schema
-        if ($content->schema instanceof Reference) {
-            $referencedSchema = $content->schema->resolve();
-            // Model data is directly returned
-            if (null === $referencedSchema->type || 'object' === $referencedSchema->type) {
-                $ref = $content->schema->getJsonReference()->getJsonPointer()->getPointer();
-                if (0 === strpos($ref, '/components/schemas/')) {
-                    return [substr($ref, 20), '', ''];
-                }
+            if ((empty($schema->type) || 'object' === $schema->type) && empty($schema->properties)) {
+                continue;
             }
-            // an array of Model data is directly returned
-            if ('array' === $referencedSchema->type && $referencedSchema->items instanceof Reference) {
-                $ref = $referencedSchema->items->getJsonReference()->getJsonPointer()->getPointer();
-                if (0 === strpos($ref, '/components/schemas/')) {
-                    return [substr($ref, 20), '', ''];
-                }
-            }
-        } else {
-            $referencedSchema = $content->schema;
-        }
 
-        if (null === $referencedSchema) {
-            return [null, null, null];
-        }
-        if (null === $referencedSchema->type || 'object' === $referencedSchema->type) {
-            foreach ($referencedSchema->properties as $propertyName => $property) {
+            $attributes = [];
+            $ref = $schema->getDocumentPosition();
+            $name = 0 === strpos($ref, '/components/schemas/')
+                    ? substr($ref, 20) : $controller.$actionName;
+
+            if ('array' === $schema->type && !empty($schema->items)) {
+                $ref = $schema->items->getDocumentPosition();
+                $name = 0 === strpos($ref, '/components/schemas/')
+                    ? substr($ref, 20) : $controller.$actionName;
+
+                $attributes = $attributes + $this->getValidationRules($schema->items, $name, isset($schema->items->required[$name]));
+            }
+
+            foreach ($schema->properties as $propertyName => $property) {
                 if ($property instanceof Reference) {
-                    $referencedModelSchema = $property->resolve();
-                    if (null === $referencedModelSchema->type || 'object' === $referencedModelSchema->type) {
-                        // Model data is wrapped
-                        $ref = $property->getJsonReference()->getJsonPointer()->getPointer();
-                        if (0 === strpos($ref, '/components/schemas/')) {
-                            return [substr($ref, 20), $propertyName, null];
-                        }
-                    } elseif ('array' === $referencedModelSchema->type && $referencedModelSchema->items instanceof Reference) {
-                        // an array of Model data is wrapped
-                        $ref = $referencedModelSchema->items->getJsonReference()->getJsonPointer()->getPointer();
-                        if (0 === strpos($ref, '/components/schemas/')) {
-                            return [substr($ref, 20), null, $propertyName];
-                        }
-                    }
-                } elseif ('array' === $property->type && $property->items instanceof Reference) {
-                    // an array of Model data is wrapped
-                    $ref = $property->items->getJsonReference()->getJsonPointer()->getPointer();
-                    if (0 === strpos($ref, '/components/schemas/')) {
-                        return [substr($ref, 20), null, $propertyName];
-                    }
+                    $property = $property->resolve();
                 }
+                $attributes = $attributes + $this->getValidationRules($property, $propertyName, isset($property->required[$propertyName]));
             }
-        }
-        if ('array' === $referencedSchema->type && $referencedSchema->items instanceof Reference) {
-            $ref = $referencedSchema->items->getJsonReference()->getJsonPointer()->getPointer();
-            if (0 === strpos($ref, '/components/schemas/')) {
-                return [substr($ref, 20), '', ''];
-            }
-        }
 
-        return [null, null, null];
+            return [
+                'name' => $name,
+                'attributes' => $attributes,
+            ];
+        }
     }
 
     /**
@@ -290,7 +264,7 @@ class YmlCommand extends Command
      * @param array \cebe\openapi\spec\Parameters
      * @param \cebe\openapi\spec\Parameter $parameters
      */
-    protected function generateQuery($parameters)
+    protected function getQuery($parameters)
     {
         if (empty($parameters)) {
             return [];
@@ -304,6 +278,21 @@ class YmlCommand extends Command
         }
 
         return $query;
+    }
+
+    protected function getValidationRules(Schema $schema, string $name, bool $required)
+    {
+        $attributes = [];
+
+        if ('object' == $schema->type && !empty($schema->properties)) {
+            foreach ($schema->properties as $propName => $property) {
+                $attributes[$name.'.*.'.$propName] = $this->getValidationRule($property, isset($property->required[$propName]));
+            }
+        } else {
+            $attributes[$name] = $this->getValidationRule($schema, isset($schema->required[$name]));
+        }
+
+        return $attributes;
     }
 
     /**

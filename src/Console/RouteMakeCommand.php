@@ -5,42 +5,34 @@ namespace Genoa\Console;
 use Dingo\Api\Routing\Router;
 use Illuminate\Console\Command;
 
-class RouteListCommand extends Command
+class RouteMakeCommand extends Command
 {
+    protected $signature = 'genoa:route {uri : Endpoint of API/Route}
+        {--method= : Http Methods (GET/POST/PUT/PATCH/DELETE)}
+        {--action= : Controller@methods}
+        {--desc= : Description of route}';
     /**
      * The console command name.
      *
      * @var string
      */
-    protected $name = 'route:list';
+    protected $name = 'genoa:route';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Display all registered routes.';
-
-    /**
-     * Get the router.
-     *
-     * @return \Laravel\Lumen\Routing\Router
-     */
-    protected function getRouter()
-    {
-        return isset($this->laravel->router) ? $this->laravel->router : $this->laravel;
-    }
+    protected $description = 'Create a new route.';
 
     /**
      * Execute the console command.
-     *
-     * @return void
      */
     public function handle()
     {
         $router = $this->getRouter();
         $routeCollection = $router->getRoutes();
-        $rows = array();
+        $rows = [];
 
         foreach ($routeCollection as $route) {
             $rows[] = [
@@ -70,21 +62,29 @@ class RouteListCommand extends Command
             }
         }
 
-        $headers = array('Verb', 'Path', 'NamedRoute', 'Controller', 'Action', 'Middleware');
+        $headers = ['Verb', 'Path', 'NamedRoute', 'Controller', 'Action', 'Middleware'];
         $this->table($headers, $rows);
     }
 
     /**
-     * @param array $action
+     * Get the router.
+     *
+     * @return \Laravel\Lumen\Routing\Router
+     */
+    protected function getRouter()
+    {
+        return isset($this->laravel->router) ? $this->laravel->router : $this->laravel;
+    }
+
+    /**
      * @return string
      */
     protected function getNamedRoute(array $action)
     {
-        return (!isset($action['as'])) ? "" : $action['as'];
+        return (!isset($action['as'])) ? '' : $action['as'];
     }
 
     /**
-     * @param array $action
      * @return mixed|string
      */
     protected function getController(array $action)
@@ -93,33 +93,31 @@ class RouteListCommand extends Command
             return 'None';
         }
 
-        return current(explode("@", $action['uses']));
+        return current(explode('@', $action['uses']));
     }
 
     /**
-     * @param array $action
      * @return string
      */
     protected function getAction(array $action)
     {
         if (!empty($action['uses']) && is_string($action['uses'])) {
             $data = $action['uses'];
-            if (($pos = strpos($data, "@")) !== false) {
+            if (($pos = strpos($data, '@')) !== false) {
                 return substr($data, $pos + 1);
-            } else {
-                return "METHOD NOT FOUND";
             }
-        } else {
-            return 'Closure';
+
+            return 'METHOD NOT FOUND';
         }
+
+        return 'Closure';
     }
 
     /**
-     * @param array $action
      * @return string
      */
     protected function getMiddleware(array $action)
     {
-        return (isset($action['middleware'])) ? (is_array($action['middleware'])) ? join(", ", $action['middleware']) : $action['middleware'] : '';
+        return (isset($action['middleware'])) ? (is_array($action['middleware'])) ? join(', ', $action['middleware']) : $action['middleware'] : '';
     }
 }

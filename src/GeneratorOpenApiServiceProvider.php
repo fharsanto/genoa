@@ -19,9 +19,19 @@ class GeneratorOpenApiServiceProvider extends ServiceProvider
      * @var array
      */
     protected $commands = [
-        'AllMake' => 'command.genoa.make',
-        'YmlMake' => 'command.genoa.yml',
+        // 'AllMake' => 'command.genoa.make',
+        // 'YmlMake' => 'command.genoa.yml',
+        'RouteMake' => 'command.genoa.route',
     ];
+
+    public function __call($name, $arguments)
+    {
+        $className = '\\Genoa\\Console\\'.$name;
+
+        $this->app->singleton($arguments[0], function ($app) use ($className) {
+            return new $className($app['files']);
+        });
+    }
 
     /**
      * Register the service provider.
@@ -39,10 +49,10 @@ class GeneratorOpenApiServiceProvider extends ServiceProvider
     public function provides()
     {
         if ($this->app->environment('production')) {
-            return array_values($this->commands);
+            return [];
         }
 
-        return array_merge(array_values($this->commands), array_values($this->devCommands));
+        return array_values($this->commands);
     }
 
     /**
@@ -50,59 +60,11 @@ class GeneratorOpenApiServiceProvider extends ServiceProvider
      */
     protected function registerCommands(array $commands)
     {
-        foreach (array_keys($commands) as $command) {
-            $method = "register{$command}Command";
-
-            call_user_func_array([$this, $method], []);
+        foreach ($commands as $kc => $command) {
+            $method = "{$kc}Command";
+            call_user_func_array([$this, $method], [$command]);
         }
 
         $this->commands(array_values($commands));
-    }
-
-    protected function registerYmlMakeCommand()
-    {
-        $this->app->singleton('command.genoa.yml', function ($app) {
-            return new Console\YmlCommand($app['files']);
-        });
-    }
-
-    /**
-     * Register the command.
-     */
-    protected function registerAllMakeCommand()
-    {
-        $this->app->singleton('command.genoa.make', function ($app) {
-            return new Console\CrudMakeCommand($app['files']);
-        });
-    }
-
-    /**
-     * Register the command.
-     */
-    protected function registerModelMakeCommand()
-    {
-        $this->app->singleton('command.model.make', function ($app) {
-            return new Console\ModelMakeCommand($app['files']);
-        });
-    }
-
-    /**
-     * Register the command.
-     */
-    protected function registerRouteListCommand()
-    {
-        $this->app->singleton('command.route.list', function ($app) {
-            return new Console\RouteListCommand();
-        });
-    }
-
-    /**
-     * Register the command.
-     */
-    protected function registerControllerMakeCommand()
-    {
-        $this->app->singleton('command.controller.make', function ($app) {
-            return new Console\ControllerMakeCommand($app['files']);
-        });
     }
 }
