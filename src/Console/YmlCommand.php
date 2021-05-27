@@ -486,7 +486,7 @@ class YmlCommand extends GeneratorCommand
 
         if ('object' == $schema->type && !empty($schema->properties)) {
             foreach ($schema->properties as $propName => $property) {
-                $attributes[$name.'.*.'.$propName] = $this->getValidationRule($property, isset($property->required[$propName]));
+                $attributes[$name.'.'.$propName] = $this->getValidationRule($property, isset($property->required[$propName]));
             }
         } else {
             $attributes[$name] = $this->getValidationRule($schema, isset($schema->required[$name]));

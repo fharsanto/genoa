@@ -12,5 +12,6 @@ class DummyModel extends Model
     protected $connection = 'mongodb';
     protected $dates = ['deleted_at'];
 
+    protected $guarded = [];
     // relations
 }
