@@ -20,8 +20,8 @@ class GeneratorOpenApiServiceProvider extends ServiceProvider
      */
     protected $commands = [
         // 'AllMake' => 'command.genoa.make',
-        // 'YmlMake' => 'command.genoa.yml',
-        'RouteMake' => 'command.genoa.route',
+        'Yml' => 'command.genoa.yml',
+        // 'RouteMake' => 'command.genoa.route',
     ];
 
     public function __call($name, $arguments)
@@ -39,6 +39,7 @@ class GeneratorOpenApiServiceProvider extends ServiceProvider
     public function register()
     {
         $this->registerCommands($this->commands);
+        view()->addNamespace('template', __DIR__.'/Console/stubs');
     }
 
     /**

@@ -11,7 +11,7 @@ use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Filesystem\Filesystem;
 
-class YmlCommand extends Command
+class YmlCommand extends GeneratorCommand
 {
     /**
      * Filesystem instance.
@@ -54,7 +54,7 @@ class YmlCommand extends Command
 
     public function __construct(Filesystem $file)
     {
-        parent::__construct();
+        parent::__construct($file);
         $this->file = $file;
     }
 
@@ -67,15 +67,186 @@ class YmlCommand extends Command
             $ops = $this->getOperations();
             if (!empty($ops)) {
                 $this->generateRoutes($ops);
+                $this->generateRequests($ops);
+                $this->generateModels();
+                $this->generateControllers($ops);
+                $this->phpFixer();
             }
+            // var_dump($ops);
         } catch (\Throwable $th) {
             $this->error($th->getMessage());
         }
     }
 
+    protected function phpFixer()
+    {
+        $app = app()->basePath('app');
+        $dirs = [
+            $app.'/Http/Requests/',
+            $app.'/Models/',
+            $app.'/Http/Controllers/',
+        ];
+        foreach ($dirs as $dir) {
+            $out = shell_exec('php-cs-fixer fix '.$dir);
+            echo $out."\r\n";
+        }
+    }
+
+    protected function getStub()
+    {
+        return '';
+    }
+
     protected function generateRoutes(array $operations)
     {
-        // code...
+        $path = base_path().'/routes/web.php';
+
+        foreach ($operations as $operation) {
+            $params = [
+                'method' => !empty($operation['method']) ? $operation['method'] : 'get',
+                'uri' => $operation['path'],
+                'action' => $operation['controller'].'Controller@'.$operation['action'],
+                'desc' => $operation['description'],
+                'id' => $operation['operationId'],
+            ];
+
+            $content = view()->make('template::routes', $params)->render();
+            $this->file->append($path, $content);
+        }
+    }
+
+    protected function generateRequests(array $operations)
+    {
+        $tplContent = $this->file->get(__DIR__.'/stubs/request.stub');
+        $path = app()->basePath('app').'/Http/Requests/';
+        $this->makeDirectory($path);
+        foreach ($operations as $operation) {
+            if (empty($operation['request'])) {
+                continue;
+            }
+            $req = $operation['request'];
+            $content = str_replace([
+                'DummyRequest',
+                '[];',
+            ], [$req['name'].'Request', var_export($req['attributes'], true).';'], $tplContent);
+            // $content = view()->make('template::request', $operation['request'])->render();
+            $this->file->put($path.$req['name'].'Request.php', $content);
+        }
+    }
+
+    protected function guestModelName(array $operations, $controllerName)
+    {
+        foreach ($operations as $operation) {
+            if ($operation['controller'] === $controllerName && !empty($operation['model'])) {
+                return $operation['model'];
+            }
+        }
+
+        return '';
+    }
+
+    protected function generateControllers(array $operations)
+    {
+        $tplContent = $this->file->get(__DIR__.'/stubs/controller.stub');
+        $c = [];
+        foreach ($operations as $operation) {
+            $params = [];
+            if (!empty($operation['request'])) {
+                $params[] = '\\App\\Http\\Requests\\'.$operation['request']['name'].'Request $request';
+            }
+
+            if (!empty($operation['actionParam'])) {
+                $params[] = $operation['actionParam'][0];
+            }
+
+            if (empty($operation['model'])) {
+                $operation['model'] = $this->guestModelName($operations, $operation['controller']);
+            }
+            $operation['methodParam'] = implode(', ', $params);
+            $c[$operation['controller']][] = $operation;
+        }
+        $path = app()->basePath('app').'/Http/Controllers/';
+        $this->makeDirectory($path);
+
+        foreach ($c as $controllerName => $controller) {
+            $cName = $controllerName.'Controller';
+            $params = [
+                'name' => $cName,
+                'attributes' => $controller,
+            ];
+            $contentMethods = view()->make('template::controller-method', $params)->render();
+            $content = str_replace([
+                'DummyController',
+                '// methods',
+            ], [
+                $cName,
+                $contentMethods,
+            ], $tplContent);
+            $cPath = $path.$cName.'.php';
+            // echo $content."\r\n";
+            $this->file->put($cPath, $content);
+        }
+    }
+
+    protected function generateModels()
+    {
+        $tplContent = $this->file->get(__DIR__.'/stubs/model.stub');
+        $oa = $this->getOpenApi();
+        $models = [];
+        $path = app()->basePath('app').'/Models/';
+        $this->makeDirectory($path);
+        foreach ($oa->components->schemas as $schemaName => $schema) {
+            if ($schema instanceof Reference) {
+                $schema = $schema->resolve();
+            }
+            $relations = [];
+
+            if ((empty($schema->type) || 'object' === $schema->type) && empty($schema->properties)) {
+                continue;
+            }
+            if (!empty($schema->type) && 'object' !== $schema->type) {
+                continue;
+            }
+
+            foreach ($schema->properties as $name => $property) {
+                if ('object' === $property->type) {
+                    $ref = $property->getDocumentPosition();
+                    if (0 === strpos($ref, '/components/schemas/')) {
+                        $relations[$name] = [
+                            'class' => substr($ref, 20),
+                            'type' => 'hasOne',
+                        ];
+                    }
+                }
+
+                if ('array' === $property->type && !empty($property->items)) {
+                    $ref = $property->items->getDocumentPosition();
+                    if (isset($property->items->type) && 'string' === $property->items->type) {
+                        continue;
+                    }
+                    if (0 === strpos($ref, '/components/schemas/')) {
+                        $relations[$name] = [
+                            'class' => substr($ref, 20),
+                            'type' => 'hasMany',
+                        ];
+                    }
+                }
+            }
+            $pathModel = $path.$schemaName.'.php';
+            $rContent = view()->make('template::model-relations', [
+                'name' => $schemaName,
+                'relations' => $relations,
+            ])->render();
+            $content = str_replace([
+                'DummyModel',
+                '// relations',
+            ], [$schemaName, $rContent], $tplContent);
+            $models[] = $schemaName;
+            // echo $content."\r\n\r\n";
+            $this->file->put($pathModel, $content);
+        }
+
+        return $models;
     }
 
     /**
@@ -159,9 +330,9 @@ class YmlCommand extends Command
                 if (preg_match('/\{(.*)\}/', $part, $m)) {
                     $params = true;
                     if (isset($pathItem->parameters[$m[1]])) {
-                        $actionParams[$m[1]] = $pathItem->parameters[$m[1]];
+                        $actionParams[$m[1]] = '$'.$pathItem->parameters[$m[1]];
                     }
-                    $actionParams[] = $m[1];
+                    $actionParams[] = '$'.$m[1];
                 } elseif ($params) {
                     $action[] = $part;
                 } else {
@@ -195,20 +366,49 @@ class YmlCommand extends Command
                 }
                 $c = [
                     'path' => $path,
-                    'controller' => $controller.'Controller',
+                    'controller' => $controller,
                     'description' => !empty($operation->description) ? $operation->description : $operation->summary,
                     'operationId' => $operation->operationId,
                     'action' => $actionName,
-                    'method' => strtoupper($method),
+                    'method' => $method,
                     'actionParam' => $actionParams,
                     'query' => $this->getQuery($operation->parameters),
                     'request' => $req,
+                    'model' => $this->getModel($operation->responses),
                 ];
                 $components[] = $c;
             }
         }
 
         return $components;
+    }
+
+    protected function getModel($responses)
+    {
+        foreach ($responses as $code => $successResponse) {
+            if (((string) $code)[0] !== '2') {
+                continue;
+            }
+            if ($successResponse instanceof Reference) {
+                $successResponse = $successResponse->resolve();
+            }
+            foreach ($successResponse->content as $contentType => $content) {
+                $schema = $content->schema;
+                if ($content->schema instanceof Reference) {
+                    $schema = $content->resolve();
+                }
+
+                if ((empty($schema->type) || 'object' === $schema->type) && empty($schema->properties)) {
+                    continue;
+                }
+
+                $attributes = [];
+                $ref = $schema->getDocumentPosition();
+                if (0 === strpos($ref, '/components/schemas/')) {
+                    return substr($ref, 20);
+                }
+            }
+        }
     }
 
     protected function getRequestBody(RequestBody $requestBody, string $controller, string $actionName)

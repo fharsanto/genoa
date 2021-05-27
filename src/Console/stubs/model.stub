@@ -1,10 +1,16 @@
 <?php
 
-namespace DummyNamespace;
+namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use Jenssegers\Mongodb\Eloquent\Model;
 
-class DummyClass extends Model
+class DummyModel extends Model
 {
-    //
+    use \Jenssegers\Mongodb\Eloquent\SoftDeletes;
+
+    protected $primaryKey = 'id';
+    protected $connection = 'mongodb';
+    protected $dates = ['deleted_at'];
+
+    // relations
 }
