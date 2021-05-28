@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+// imports
 class DummyController extends Controller
 {
     // methods

@@ -8,10 +8,15 @@ class DummyModel extends Model
 {
     use \Jenssegers\Mongodb\Eloquent\SoftDeletes;
 
-    protected $primaryKey = 'id';
+    protected $primaryKey = '_id';
     protected $connection = 'mongodb';
     protected $dates = ['deleted_at'];
 
     protected $guarded = [];
+    protected $hidden = ['_id','updated_at','created_at','deleted_at'];
+
+    public function getIdAttribute() {
+      return $this->attributes['_id'];
+    }
     // relations
 }

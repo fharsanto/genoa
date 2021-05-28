@@ -9,29 +9,30 @@
     public function {{ $attr['action'] }}({{ $attr['methodParam'] }})
     {{'{'}}
         @if(!empty($attr['request']))
-if ($request->fail())
-        {{'{'}}
-            return response()->json(['code' => 422, 'message' => 'Invalid Params.', 'errors' => $request->errors()], 422);
-        {{'}'}}
+            $validated = $request->validated();
         @endif
 
-        @if(!empty($attr['model']))
-$model = \App\Models\{{ $attr['model'] }};
-        $validated = $request->validated();
-        @if(in_array($attr['method'], ['put','patch']))
-$record = $model::where('id', {{ end($attr['actionParam']) }})->first();
+        @if($attr['action'] == 'show')
+        $record = {{ $attr['model'] }}::find({{ end($attr['actionParam']) }});
+        if (empty($record)) {{'{'}}
+            return response()->json(['code' => '404', 'message' => 'Data not found.'], 404);
+        {{'}'}}        
+        return response()->json($record, 200);
+        @elseif(in_array($attr['method'], ['put','patch']))
+            $record = {{ $attr['model'] }}::where('id', {{ end($attr['actionParam']) }})->first();
         if (empty($record)) {{'{'}}
             return response()->json(['code' => '404', 'message' => 'Data not found.'], 404);
         {{'}'}} else {{'{'}}
             try {{'{'}}
-                $record->update($validated);
+                $record->fill($validated);
+                $record->save();
             {{'}'}} catch (\Exception $e) {{'{'}}
                 return response()->json(['code' => '500', 'message' => $e->getMessage()], 500);
             {{'}'}}
             return response()->json($record, 200);
         {{'}'}}
         @elseif($attr['method'] == 'delete')
-$record = $model::where('id',  {{ end($attr['actionParam']) }})->first();
+            $record = {{ $attr['model'] }}::where('id', {{ end($attr['actionParam']) }})->first();
         if (empty($record)) {{'{'}}
             return response()->json(['code' => '404', 'message' => 'Data not found.'], 404);
         {{'}'}} else {{'{'}}
@@ -40,15 +41,15 @@ $record = $model::where('id',  {{ end($attr['actionParam']) }})->first();
             {{'}'}} catch (\Exception $e) {{'{'}}
                 return response()->json(['code' => '500', 'message' => $e->getMessage()], 500);
             {{'}'}}
-            return response()->json($record, 200);
+            return response('', 202);
         {{'}'}}
         @elseif($attr['method'] == 'post')
-try {{'{'}}
-            $record = $model::create($validated);
+        try {{'{'}}
+            $record = {{ $attr['model'] }}::create($validated);
             return response()->json($record, 201);
         {{'}'}} catch (\Exception $e) {{'{'}}
             return response()->json(['code' => '500', 'message' => $e->getMessage()], 500);
         {{'}'}}
         @endif 
-    @endif{{'}'}}
+    {{'}'}}
     @endforeach
