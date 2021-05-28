@@ -1,7 +1,13 @@
 {
     "name": "feridev/genoa",
-    "description": "Generate routes, requests, controller, model & migrations from Open API design",
+    "description": "Lumen REST API (Generated) from Open API v3 spec",
     "type": "library",
+    "keywords": [
+        "openapi",
+        "open-api",
+        "generator",
+        "lumen"
+    ],
     "authors": [
         {
             "name": "Feri Harsanto",
