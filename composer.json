@@ -1,14 +1,15 @@
 {
     "name": "feridev/genoa",
-    "description": "Generate controller & model from Open API",
+    "description": "Generate routes, requests, controller, model & migrations from Open API design",
     "type": "library",
     "authors": [
         {
-            "name": "Feri Putro",
-            "email": "feri.putro@spesolution.com"
+            "name": "Feri Harsanto",
+            "email": "feri.harsanto@gmail.com"
         }
     ],
     "require": {
+        "php": ">=7.4",
         "illuminate/console": "^8.40",
         "illuminate/filesystem": "^8.40",
         "illuminate/support": "^8.40",

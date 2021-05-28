@@ -16,7 +16,7 @@
         $record = {{ $attr['model'] }}::find({{ end($attr['actionParam']) }});
         if (empty($record)) {{'{'}}
             return response()->json(['code' => '404', 'message' => 'Data not found.'], 404);
-        {{'}'}}        
+        {{'}'}}
         return response()->json($record, 200);
         @elseif(in_array($attr['method'], ['put','patch']))
             $record = {{ $attr['model'] }}::where('id', {{ end($attr['actionParam']) }})->first();
