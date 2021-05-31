@@ -1,4 +1,6 @@
 # Genoa (Generator from Open API)
+[![Total Downloads](https://img.shields.io/packagist/dt/tukangketik/genoa)](https://packagist.org/packages/tukangketik/genoa)
+
 The package provides a simple way to create Open API service (REST API). 
 
 This package uses [cebe/php-openapi](https://github.com/cebe/php-openapi) for reading from Open API specification.
