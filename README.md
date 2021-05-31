@@ -4,7 +4,9 @@ The package provides a simple way to create Open API service (REST API).
 This package uses [cebe/php-openapi](https://github.com/cebe/php-openapi) for reading from Open API specification.
 
 ## Features
-- 
+- Auto generate routes, Http/Request, Http/Controller, models
+- Auto generate common HTTP responses
+- Add support allOf extends Open API
 
 ## Getting started
 ### Installation via composer

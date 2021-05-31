@@ -19,8 +19,8 @@ trait RequestTrait
         $tplContent = file_get_contents(__DIR__.'/stubs/request.stub');
         $path = app()->basePath('app').'/Http/Requests/';
 
-        if (!is_dir(dirname($path))) {
-            mkdir(dirname($path), 0755, true);
+        if (!is_dir($path)) {
+            mkdir($path, 0755, true);
         }
 
         $num = 0;

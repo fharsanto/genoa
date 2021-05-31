@@ -19,8 +19,8 @@ trait ModelTrait
         $models = [];
         $path = app()->basePath('app').'/Models/';
 
-        if (!is_dir(dirname($path))) {
-            mkdir(dirname($path), 0755, true);
+        if (!is_dir($path)) {
+            mkdir($path, 0755, true);
         }
 
         $num = 0;
