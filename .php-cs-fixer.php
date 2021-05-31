@@ -16,3 +16,5 @@ $config->setRules([
     ->setLineEnding("\n")
     ->setFinder($finder)
 ;
+
+return $config;
