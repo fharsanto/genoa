@@ -100,7 +100,7 @@ class YmlCommand extends GeneratorCommand
         ];
         $config = __DIR__.'/../../.php_cs';
         foreach ($dirs as $dir) {
-            $out = shell_exec('php-cs-fixer fix '.$dir.' --config '.$config);
+            $out = shell_exec('vendor/bin/php-cs-fixer fix '.$dir.' --config '.$config);
             echo $out."\r\n";
         }
     }
