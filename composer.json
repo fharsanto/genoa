@@ -21,14 +21,12 @@
         "illuminate/filesystem": "^8.40",
         "illuminate/support": "^8.40",
         "symfony/var-dumper": "^5.2",
-        "cebe/php-openapi": "^1.5"
+        "cebe/php-openapi": "^1.5",
+        "friendsofphp/php-cs-fixer": "^3.0"
     },
     "autoload": {
         "psr-4": {
             "Genoa\\": "src/"
         }
-    },
-    "require-dev": {
-        "friendsofphp/php-cs-fixer": "^3.0"
     }
 }

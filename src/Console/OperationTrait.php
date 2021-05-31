@@ -152,7 +152,9 @@ trait OperationTrait
                 $schema = $content->resolve();
             }
 
-            if ((empty($schema->type) || 'object' === $schema->type) && empty($schema->properties)) {
+            if ((empty($schema->type) || 'object' === $schema->type)
+                && empty($schema->properties)
+                && !isset($schema->allOf)) {
                 continue;
             }
 
@@ -174,6 +176,17 @@ trait OperationTrait
                     $property = $property->resolve();
                 }
                 $attributes = $attributes + $this->getValidationRules($property, $propertyName, isset($property->required[$propertyName]));
+            }
+
+            if (!empty($schema->allOf)) {
+                foreach ($schema->allOf as $sch) {
+                    if ($sch instanceof Reference) {
+                        $sch = $property->resolve();
+                    }
+                    foreach ($sch->properties as $key => $prop) {
+                        $attributes = $attributes + $this->getValidationRules($prop, $key, isset($prop->required[$key]));
+                    }
+                }
             }
 
             return [

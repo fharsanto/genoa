@@ -30,11 +30,17 @@ trait ModelTrait
             }
             $relations = [];
 
-            if ((empty($schema->type) || 'object' === $schema->type) && empty($schema->properties)) {
+            if ((empty($schema->type) || 'object' === $schema->type)
+                && empty($schema->properties)
+                && !isset($schema->allOf)) {
                 continue;
             }
             if (!empty($schema->type) && 'object' !== $schema->type) {
                 continue;
+            }
+
+            if (!empty($schema->allOf)) {
+                $schema = $schema->allOf[0];
             }
 
             foreach ($schema->properties as $name => $property) {
@@ -73,6 +79,7 @@ trait ModelTrait
             $models[] = $schemaName;
             // echo $content."\r\n\r\n";
             if (file_put_contents($pathModel, $content)) {
+                $this->line("<info>Model {$schemaName} created</info>");
                 ++$num;
             }
         }

@@ -35,6 +35,7 @@ trait RequestTrait
             ], [$req['name'].'Request', var_export($req['attributes'], true).';'], $tplContent);
             // $content = view()->make('template::request', $operation['request'])->render();
             if (file_put_contents($path.$req['name'].'Request.php', $content)) {
+                $this->line("<info>Request {$req['name']} created</info>");
                 ++$num;
             }
             // $this->file->put($path.$req['name'].'Request.php', $content);

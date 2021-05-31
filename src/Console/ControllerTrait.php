@@ -76,6 +76,7 @@ trait ControllerTrait
             $cPath = $path.$cName.'.php';
             // echo $content."\r\n";
             if (file_put_contents($cPath, $content)) {
+                $this->line("<info>Controller {$cName} created</info>");
                 ++$num;
             }
         }
