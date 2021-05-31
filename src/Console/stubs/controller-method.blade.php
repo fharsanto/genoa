@@ -18,6 +18,28 @@
             return response()->json(['code' => '404', 'message' => 'Data not found.'], 404);
         }
         return response()->json($record, 200);
+        @elseif($attr['action'] == 'index')
+        $offset = !empty($request['offset']) ? $request['offset'] : 0;
+        $limit = !empty($request['limit']) ? $request['limit'] : 10;
+        $filter = !empty($request['filter']) ? $request['filter'] : [];
+        $order = !empty($request['order']) ? $request['order'] : false;
+        $total = {{ $attr['model'] }}::where($filter)->count();
+
+        $headers = [
+            'Pagination-Rows' => $total,
+            'Pagination-Page' => ceil($total/$limit),
+            'Pagination-Limit' => $limit
+        ];
+
+        $records = {{ $attr['model'] }}::where($filter)
+            ->when($order, function($query, $order){
+                return $query->orderBy($order);
+            })
+            ->offset($offset)
+            ->limit($limit)
+            ->get();
+        
+        return response()->json($records, empty($records) ? 404 : 200, $headers);
         @elseif(in_array($attr['method'], ['put','patch']))
             $record = {{ $attr['model'] }}::where('id', {{ end($attr['actionParam']) }})->first();
         if (empty($record)) {
