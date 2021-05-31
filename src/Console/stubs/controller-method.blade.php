@@ -8,7 +8,7 @@
      */
     public function {{ $attr['action'] }}({{ $attr['methodParam'] }})
     {
-        @if(!empty($attr['request']))
+        @if(!empty($attr['request']) && $attr['action'] !== 'index')
             $validated = $request->validated();
         @endif
 
@@ -19,6 +19,13 @@
         }
         return response()->json($record, 200);
         @elseif($attr['action'] == 'index')
+        $this->validate($request, [
+            'offset' => 'nullable|integer',
+            'limit' => 'nullable|integer',
+            'filter' => 'nullable|array',
+            'order' => 'nullable|string'
+        ]);
+
         $offset = !empty($request['offset']) ? $request['offset'] : 0;
         $limit = !empty($request['limit']) ? $request['limit'] : 10;
         $filter = !empty($request['filter']) ? $request['filter'] : [];
@@ -41,7 +48,7 @@
         
         return response()->json($records, empty($records) ? 404 : 200, $headers);
         @elseif(in_array($attr['method'], ['put','patch']))
-            $record = {{ $attr['model'] }}::where('id', {{ end($attr['actionParam']) }})->first();
+            $record = {{ $attr['model'] }}::find({{ end($attr['actionParam']) }});
         if (empty($record)) {
             return response()->json(['code' => '404', 'message' => 'Data not found.'], 404);
         } else {
@@ -54,7 +61,7 @@
             return response()->json($record, 200);
         }
         @elseif($attr['method'] == 'delete')
-            $record = {{ $attr['model'] }}::where('id', {{ end($attr['actionParam']) }})->first();
+            $record = {{ $attr['model'] }}::find({{ end($attr['actionParam']) }});
         if (empty($record)) {
             return response()->json(['code' => '404', 'message' => 'Data not found.'], 404);
         } else {

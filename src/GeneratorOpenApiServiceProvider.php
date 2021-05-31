@@ -56,6 +56,18 @@ class GeneratorOpenApiServiceProvider extends ServiceProvider
         return array_values($this->commands);
     }
 
+    public function boot()
+    {
+        $this->app->resolving(FormRequest::class, function ($form, $app) {
+            $form = FormRequest::createFrom($app['request'], $form);
+            $form->setContainer($app);
+        });
+
+        $this->app->afterResolving(FormRequest::class, function (FormRequest $form) {
+            $form->validate();
+        });
+    }
+
     /**
      * Register the given commands.
      */

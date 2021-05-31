@@ -120,7 +120,9 @@ trait OperationTrait
                     $schema = $content->resolve();
                 }
 
-                if ((empty($schema->type) || 'object' === $schema->type) && empty($schema->properties)) {
+                if ((empty($schema->type) || 'object' === $schema->type)
+                    && empty($schema->properties)
+                    && !isset($schema->allOf)) {
                     continue;
                 }
 
@@ -184,7 +186,9 @@ trait OperationTrait
                         $sch = $property->resolve();
                     }
                     foreach ($sch->properties as $key => $prop) {
-                        $attributes = $attributes + $this->getValidationRules($prop, $key, isset($prop->required[$key]));
+                        $required = !empty($prop->required[$key]) ? $prop->required[$key]
+                            : (!empty($sch->required) ? in_array($key, $sch->required) : false);
+                        $attributes = $attributes + $this->getValidationRules($prop, $key, $required);
                     }
                 }
             }
@@ -230,7 +234,8 @@ trait OperationTrait
                 $attributes[$name.'.'.$propName] = $this->getValidationRule($property, isset($property->required[$propName]));
             }
         } else {
-            $attributes[$name] = $this->getValidationRule($schema, isset($schema->required[$name]));
+            $req = isset($schema->required[$name]) ? $schema->required[$name] : $required;
+            $attributes[$name] = $this->getValidationRule($schema, $req);
         }
 
         return $attributes;

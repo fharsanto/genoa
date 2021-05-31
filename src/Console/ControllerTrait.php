@@ -37,6 +37,10 @@ trait ControllerTrait
                 $params[] = $operation['actionParam'][0];
             }
 
+            if (empty($params) && !empty($operation['query']) && 'index' === $operation['action']) {
+                $params[] = '\\Illuminate\\Http\\Request $request';
+            }
+
             if (empty($operation['model'])) {
                 $operation['model'] = $this->guestModelName($operations, $operation['controller']);
             }

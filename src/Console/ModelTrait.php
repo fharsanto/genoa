@@ -3,6 +3,7 @@
 namespace Genoa\Console;
 
 use cebe\openapi\spec\Reference;
+use cebe\openapi\spec\Schema;
 use cebe\openapi\SpecObjectInterface;
 use Illuminate\Console\Concerns\InteractsWithIO;
 
@@ -39,34 +40,13 @@ trait ModelTrait
                 continue;
             }
 
-            if (!empty($schema->allOf)) {
-                $schema = $schema->allOf[0];
+            $relations = $this->getRelations($schema);
+
+            if (!empty($schema->allOf) && count($schema->allOf) > 1) {
+                $endAllOf = $schema->allOf[count($schema->allOf) - 1];
+                $relations = $relations + $this->getRelations($endAllOf);
             }
 
-            foreach ($schema->properties as $name => $property) {
-                if ('object' === $property->type) {
-                    $ref = $property->getDocumentPosition();
-                    if (0 === strpos($ref, '/components/schemas/')) {
-                        $relations[$name] = [
-                            'class' => substr($ref, 20),
-                            'type' => 'hasOne',
-                        ];
-                    }
-                }
-
-                if ('array' === $property->type && !empty($property->items)) {
-                    $ref = $property->items->getDocumentPosition();
-                    if (isset($property->items->type) && 'string' === $property->items->type) {
-                        continue;
-                    }
-                    if (0 === strpos($ref, '/components/schemas/')) {
-                        $relations[$name] = [
-                            'class' => substr($ref, 20),
-                            'type' => 'hasMany',
-                        ];
-                    }
-                }
-            }
             $pathModel = $path.$schemaName.'.php';
             $rContent = view()->make('template::model-relations', [
                 'name' => $schemaName,
@@ -86,5 +66,37 @@ trait ModelTrait
         $this->info("{$num} models generated on {$path}");
 
         return $models;
+    }
+
+    protected function getRelations(Schema $schema)
+    {
+        $relations = [];
+        $schemaIsObject = 'object' === $schema->type;
+        foreach ($schema->properties as $name => $property) {
+            if ('object' === $property->type || $schemaIsObject) {
+                $ref = $property->getDocumentPosition();
+                if (0 === strpos($ref, '/components/schemas/')) {
+                    $relations[$name] = [
+                        'class' => substr($ref, 20),
+                        'type' => 'hasOne',
+                    ];
+                }
+            }
+
+            if ('array' === $property->type && !empty($property->items)) {
+                $ref = $property->items->getDocumentPosition();
+                if (isset($property->items->type) && 'string' === $property->items->type) {
+                    continue;
+                }
+                if (0 === strpos($ref, '/components/schemas/')) {
+                    $relations[$name] = [
+                        'class' => substr($ref, 20),
+                        'type' => 'hasMany',
+                    ];
+                }
+            }
+        }
+
+        return $relations;
     }
 }

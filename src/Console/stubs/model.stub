@@ -13,10 +13,14 @@ class DummyModel extends Model
     protected $dates = ['deleted_at'];
 
     protected $guarded = [];
-    protected $hidden = ['_id','updated_at','created_at','deleted_at'];
 
-    // public function getIdAttribute() {
-    //  return $this->attributes['_id'];
-    // }
+    protected $hidden = ['_id', 'updated_at', 'created_at', 'deleted_at'];
+    protected $appends = ['id'];
+
+    public function getIdAttribute($value = null)
+    {
+        return parent::getIdAttribute();
+    }
+
     // relations
 }
