@@ -1,11 +1,18 @@
 <?php
-return PhpCsFixer\Config::create()
-->setRules([
+
+$finder = PhpCsFixer\Finder::create()
+    ->exclude('tests/Fixtures')
+    ->in(__DIR__)
+;
+
+$config = new PhpCsFixer\Config();
+$config->setRules([
     '@PhpCsFixer' => true,
     'indentation_type' => true,
     'array_indentation' => true,
-    'array_syntax' => array('syntax' => 'short'),    
+    'array_syntax' => ['syntax' => 'short'],
 ])
 //->setIndent("\t")
-->setLineEnding("\n")
+    ->setLineEnding("\n")
+    ->setFinder($finder)
 ;
