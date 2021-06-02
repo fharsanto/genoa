@@ -1,0 +1,10 @@
+stages:
+- test
+
+job_testing:
+  tags:
+    - mac-feri
+  image: docker:alpine
+  stage: test
+  script:
+    - printenv
