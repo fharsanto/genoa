@@ -26,8 +26,8 @@
             'order' => 'nullable|string'
         ]);
 
-        $offset = !empty($request['offset']) ? $request['offset'] : 0;
-        $limit = !empty($request['limit']) ? $request['limit'] : 10;
+        $offset = !empty($request['offset']) ? intval($request['offset']) : 0;
+        $limit = !empty($request['limit']) ? intval($request['limit']) : 10;
         $filter = !empty($request['filter']) ? $request['filter'] : [];
         $order = !empty($request['order']) ? $request['order'] : false;
         $total = {{ $attr['model'] }}::where($filter)->count();
